@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学生选课系统</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: "Microsoft YaHei", sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+    }
+    .container {
+        max-width: 900px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        overflow: hidden;
+    }
+    .header {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+    .header h1 { font-size: 28px; margin-bottom: 8px; }
+    .header p { opacity: 0.9; font-size: 14px; }
+    
+    .content { padding: 30px; }
+    .page { display: none; }
+    .page.active { display: block; }
+    
+    .form-group { margin-bottom: 20px; }
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #303133;
+        font-weight: 500;
+    }
+    .form-group input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #dcdfe6;
+        border-radius: 8px;
+        font-size: 15px;
+        transition: border-color 0.3s;
+    }
+    .form-group input:focus {
+        outline: none;
+        border-color: #409eff;
+    }
+    
+    .btn {
+        padding: 12px 28px;
+        border: none;
+        border-radius: 8px;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-weight: 500;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102,126,234,0.4); }
+    .btn-primary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    .btn-success { background: #67c23a; color: white; }
+    .btn-success:hover { background: #85ce61; }
+    .btn-warning { background: #e6a23c; color: white; }
+    .btn-danger { background: #f56c6c; color: white; }
+    .btn-danger:hover { background: #f78989; }
+    .btn-sm { padding: 6px 14px; font-size: 13px; }
+    
+    .course-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+    }
+    .course-card {
+        border: 2px solid #e4e7ed;
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s;
+        position: relative;
+    }
+    .course-card:hover:not(.full):not(.disabled) {
+        border-color: #409eff;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(64,158,255,0.15);
+    }
+    .course-card.full, .course-card.disabled {
+        background: #f5f7fa;
+        opacity: 0.6;
+    }
+    .course-name {
+        font-size: 18px;
+        font-weight: 600;
+        color: #303133;
+        margin-bottom: 8px;
+    }
+    .course-teacher {
+        color: #606266;
+        font-size: 14px;
+        margin-bottom: 12px;
+    }
+    .course-quota {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    .quota-bar {
+        flex: 1;
+        height: 8px;
+        background: #ebeef5;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-right: 10px;
+    }
+    .quota-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #67c23a, #409eff);
+        transition: width 0.5s;
+    }
+    .quota-text {
+        font-size: 13px;
+        color: #909399;
+        white-space: nowrap;
+    }
+    .course-card.full .quota-fill { background: #f56c6c; }
+    
+    .status-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .badge-full { background: #fef0f0; color: #f56c6c; }
+    .badge-available { background: #ecf5ff; color: #409eff; }
+    
+    .student-info {
+        background: #ecf5ff;
+        padding: 16px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .student-info span { color: #409eff; font-weight: 500; }
+    
+    .selected-result {
+        background: #f0f9eb;
+        border: 2px solid #67c23a;
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+        margin-bottom: 24px;
+    }
+    .selected-result h3 {
+        color: #67c23a;
+        margin-bottom: 8px;
+        font-size: 20px;
+    }
+    .selected-result .course-name-large {
+        font-size: 24px;
+        font-weight: 600;
+        color: #303133;
+        margin: 12px 0;
+    }
+    .selected-result p {
+        color: #606266;
+        font-size: 14px;
+    }
+    
+    .admin-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+    }
+    .admin-table th, .admin-table td {
+        padding: 12px 16px;
+        text-align: left;
+        border-bottom: 1px solid #ebeef5;
+    }
+    .admin-table th {
+        background: #f5f7fa;
+        font-weight: 600;
+        color: #303133;
+    }
+    .admin-table tr:hover { background: #fafafa; }
+    
+    .section-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #303133;
+        margin: 24px 0 12px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #409eff;
+        display: inline-block;
+    }
+    
+    .toolbar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 420px;
+    }
+    .modal-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .tip {
+        padding: 12px 16px;
+        background: #fdf6ec;
+        border-left: 4px solid #e6a23c;
+        color: #b88230;
+        border-radius: 4px;
+        margin-bottom: 16px;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    
+    .empty {
+        text-align: center;
+        padding: 40px;
+        color: #909399;
+    }
+
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .back-btn {
+        color: #909399;
+        text-decoration: none;
+        font-size: 14px;
+    }
+    .back-btn:hover { color: #409eff; }
+
+    .loading { text-align: center; padding: 20px; color: #909399; }
+
+    @media (max-width: 600px) {
+        .content { padding: 20px; }
+        .course-list { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>📚 学生选课系统</h1>
+        <p>在线选课 · 实时名额 · 实名提交</p>
+    </div>
+    
+    <div class="content">
+        <!-- 学生端 -->
+        <div id="student-page" class="page active">
+            <div id="student-login">
+                <h3 style="margin-bottom: 20px; color: #303133;">学生实名登录</h3>
+                <div class="tip">
+                    ⚠️ 选课规则说明：<br>
+                    1. 每位同学限选1门课程；<br>
+                    2. 选课提交后<strong>不可更改、不可取消</strong>，请慎重选择；<br>
+                    3. 课程名额有限，选满即止。
+                </div>
+                <div class="form-group">
+                    <label>姓名（仅限中文）</label>
+                    <input type="text" id="stu-name" placeholder="请输入真实中文姓名" oninput="this.value=this.value.replace(/[^\u4e00-\u9fa5]/g,'')">
+                </div>
+                <div class="form-group">
+                    <label>班级（三位数字编码）</label>
+                    <input type="text" id="stu-class" placeholder="例如：301、705、812" maxlength="3" oninput="this.value=this.value.replace(/\D/g,'')">
+                </div>
+                <button class="btn btn-primary" onclick="studentLogin()">登 录 选 课</button>
+            </div>
+            
+            <div id="student-select" style="display:none;">
+                <div class="student-info">
+                    <div>👤 <span id="show-name"></span>（班级：<span id="show-class"></span>）</div>
+                    <button class="btn btn-sm btn-warning" onclick="studentLogout()">退出</button>
+                </div>
+
+                <div id="selected-result-box" style="display:none;">
+                    <div class="selected-result">
+                        <h3>✅ 您已完成选课</h3>
+                        <p>选课结果一经提交，不可更改、不可取消</p>
+                        <div class="course-name-large" id="my-course-name"></div>
+                        <p>任课教师：<span id="my-course-teacher"></span></p>
+                    </div>
+                    <div class="tip">如需调整选课，请联系授课老师在管理后台处理。</div>
+                </div>
+                
+                <div id="select-tip-box">
+                    <div class="tip">
+                        💡 请在下方列表中选择1门课程，<strong>点击提交后不可更改</strong>，请确认后再操作。
+                    </div>
+                    <h3 class="section-title">可选课程列表</h3>
+                </div>
+                
+                <div id="course-container" class="course-list">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 教师端 -->
+        <div id="teacher-page" class="page">
+            <div class="admin-header">
+                <h3 style="color: #30333;">教师管理后台</h3>
+                <a href="#" class="back-btn" onclick="goStudent()">← 返回学生端</a>
+            </div>
+            
+            <div id="teacher-login">
+                <div class="form-group">
+                    <label>管理密码</label>
+                    <input type="password" id="admin-pwd" placeholder="请输入管理员密码">
+                </div>
+                <button class="btn btn-primary" onclick="teacherLogin()">进 入 管 理</button>
+            </div>
+            
+            <div id="teacher-panel" style="display:none;">
+                <div>
+                    <h4 class="section-title">课程管理</h4>
+                    <div class="toolbar">
+                        <button class="btn btn-success btn-sm" onclick="showAddCourse()">➕ 新增课程</button>
+                        <button class="btn btn-primary btn-sm" onclick="exportData()">📥 导出选课名单</button>
+                        <button class="btn btn-danger btn-sm" onclick="clearAllRecords()">🗑 清空所有选课记录</button>
+                    </div>
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>课程名称</th>
+                                <th>任课教师</th>
+                                <th>名额上限</th>
+                                <th>已选人数</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-course-list"></tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 30px;">
+                    <h4 class="section-title">选课学生名单</h4>
+                    <div style="margin-bottom: 10px;">
+                        <select id="filter-course" onchange="renderStudentList()" style="padding:8px 12px; border-radius:6px; border:1px solid #dcdfe6;">
+                            <option value="">全部课程</option>
+                        </select>
+                        <span style="margin-left: 12px; color: #606266;">共 <span id="total-count">0</span> 人选课</span>
+                    </div>
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>班级</th>
+                                <th>姓名</th>
+                                <th>所选课程</th>
+                                <th>选课时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="student-record-list"></tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top: 20px; text-align: right;">
+                    <button class="btn btn-sm btn-warning" onclick="teacherLogout()">退出管理</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 课程编辑弹窗 -->
+<div id="course-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-title" id="modal-title">新增课程</div>
+        <input type="hidden" id="edit-course-id">
+        <div class="form-group">
+            <label>课程名称</label>
+            <input type="text" id="course-name-input" placeholder="请输入课程名称">
+        </div>
+        <div class="form-group">
+            <label>任课教师</label>
+            <input type="text" id="course-teacher-input" placeholder="请输入任课教师姓名">
+        </div>
+        <div class="form-group">
+            <label>可选人数上限</label>
+            <input type="number" id="course-quota-input" placeholder="请输入最大可选人数" min="1">
+        </div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeModal()">取消</button>
+            <button class="btn btn-primary" onclick="saveCourse()">保存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const API_URL = '/api';
+let adminPassword = '';
+let currentStudent = null;
+let allCourses = [];
+let allRecords = [];
+
+// 通用请求函数
+async function request(action, data = {}) {
+    const formData = new FormData();
+    formData.append('action', action);
+    for (let key in data) {
+        formData.append(key, data[key]);
+    }
+    const res = await fetch(API_URL, { method: 'POST', body: formData });
+    return await res.json();
+}
+
+// 页面入口控制
+function checkEntry() {
+    const hash = location.hash.replace('#', '');
+    if (hash === 'admin') {
+        showTeacherPage();
+    } else {
+        showStudentPage();
+    }
+}
+
+function showStudentPage() {
+    document.getElementById('student-page').classList.add('active');
+    document.getElementById('teacher-page').classList.remove('active');
+    location.hash = '';
+    loadCourses();
+}
+
+function showTeacherPage() {
+    document.getElementById('student-page').classList.remove('active');
+    document.getElementById('teacher-page').classList.add('active');
+    location.hash = 'admin';
+}
+
+function goStudent() {
+    if (confirm('确定要返回学生端吗？')) {
+        teacherLogout();
+        showStudentPage();
+    }
+}
+
+// 数据加载
+async function loadCourses() {
+    const res = await request('getCourses');
+    if (res.code === 0) {
+        allCourses = res.data;
+        if (currentStudent) renderCourses();
+    }
+}
+
+async function loadRecords() {
+    const res = await request('getRecords');
+    if (res.code === 0) {
+        allRecords = res.data;
+    }
+}
+
+// 学生端逻辑
+function getStudentKey(name, className) {
+    return `${className.trim()}_${name.trim()}`;
+}
+
+async function studentLogin() {
+    const name = document.getElementById('stu-name').value.trim();
+    const className = document.getElementById('stu-class').value.trim();
+    
+    if (!name || !className) {
+        alert('请填写完整的姓名和班级！');
+        return;
+    }
+    if (!/^[\u4e00-\u9fa5]+$/.test(name)) {
+        alert('姓名格式错误！\n请输入纯中文真实姓名，不得包含数字、字母、空格或符号');
+        return;
+    }
+    if (!/^\d{3}$/.test(className)) {
+        alert('班级格式错误！\n请输入3位数字编码，例如：301（三年级1班）、705（七年级5班）');
+        return;
+    }
+    
+    currentStudent = { name, className, key: getStudentKey(name, className) };
+    
+    document.getElementById('student-login').style.display = 'none';
+    document.getElementById('student-select').style.display = 'block';
+    document.getElementById('show-name').textContent = name;
+    document.getElementById('show-class').textContent = className;
+    
+    await loadRecords();
+    const myRecord = allRecords.find(r => r.stuKey === currentStudent.key);
+    
+    if (myRecord) {
+        showSelectedResult(myRecord.courseId);
+    } else {
+        document.getElementById('selected-result-box').style.display = 'none';
+        document.getElementById('select-tip-box').style.display = 'block';
+        document.getElementById('course-container').style.display = 'grid';
+        await loadCourses();
+        renderCourses();
+    }
+}
+
+function studentLogout() {
+    currentStudent = null;
+    document.getElementById('stu-name').value = '';
+    document.getElementById('stu-class').value = '';
+    document.getElementById('student-login').style.display = 'block';
+    document.getElementById('student-select').style.display = 'none';
+}
+
+function showSelectedResult(courseId) {
+    const course = allCourses.find(c => c.id == courseId);
+    document.getElementById('selected-result-box').style.display = 'block';
+    document.getElementById('select-tip-box').style.display = 'none';
+    document.getElementById('course-container').style.display = 'none';
+    document.getElementById('my-course-name').textContent = course ? course.name : '未知课程';
+    document.getElementById('my-course-teacher').textContent = course ? course.teacher : '未知';
+}
+
+function renderCourses() {
+    const container = document.getElementById('course-container');
+    container.innerHTML = '';
+    
+    if (allCourses.length === 0) {
+        container.innerHTML = '<div class="empty" style="grid-column:1/-1;">暂无可选课程</div>';
+        return;
+    }
+    
+    allCourses.forEach(course => {
+        const selected = allRecords.filter(r => r.courseId == course.id).length;
+        const isFull = selected >= course.quota;
+        const percent = Math.min(100, (selected / course.quota) * 100);
+        
+        const card = document.createElement('div');
+        card.className = 'course-card' + (isFull ? ' full' : '');
+        
+        const badgeHtml = isFull 
+            ? '<span class="status-badge badge-full">已满员</span>'
+            : '<span class="status-badge badge-available">可选</span>';
+        
+        card.innerHTML = `
+            ${badgeHtml}
+            <div class="course-name">${course.name}</div>
+            <div class="course-teacher">👨‍🏫 ${course.teacher}</div>
+            <div class="course-quota">
+                <div class="quota-bar"><div class="quota-fill" style="width:${percent}%"></div></div>
+                <span class="quota-text">${selected} / ${course.quota}</span>
+            </div>
+            <button class="btn btn-primary btn-sm" 
+                style="width:100%"
+                ${isFull ? 'disabled' : ''}
+                onclick="submitSelect(${course.id})">
+                ${isFull ? '名额已满' : '确认选择此课程'}
+            </button>
+        `;
+        container.appendChild(card);
+    });
+}
+
+async function submitSelect(courseId) {
+    if (!currentStudent) return;
+    const course = allCourses.find(c => c.id == courseId);
+    
+    const confirmMsg = `您确定选择「${course.name}」吗？\n\n选课一经提交，不可更改、不可取消，请确认后点击确定。`;
+    if (!confirm(confirmMsg)) return;
+    
+    const res = await request('submitSelect', {
+        stuName: currentStudent.name,
+        stuClass: currentStudent.className,
+        courseId: courseId
+    });
+    
+    if (res.code === 0) {
+        await loadRecords();
+        showSelectedResult(courseId);
+        alert(res.msg);
+    } else {
+        alert(res.msg);
+        await loadCourses();
+        await loadRecords();
+        renderCourses();
+    }
+}
+
+// 教师端逻辑
+async function teacherLogin() {
+    const pwd = document.getElementById('admin-pwd').value;
+    if (!pwd) {
+        alert('请输入管理密码');
+        return;
+    }
+    
+    // 验证权限
+    const testRes = await request('saveCourse', { 
+        password: pwd, 
+        id: 0, 
+        name: 'test_check', 
+        teacher: 'test', 
+        quota: 1 
+    });
+    
+    if (testRes.msg.includes('密码错误')) {
+        alert('密码错误！');
+        return;
+    }
+    
+    adminPassword = pwd;
+    document.getElementById('teacher-login').style.display = 'none';
+    document.getElementById('teacher-panel').style.display = 'block';
+    
+    await loadCourses();
+    await loadRecords();
+    renderAdminCourses();
+    renderStudentList();
+    renderFilterOptions();
+}
+
+function teacherLogout() {
+    adminPassword = '';
+    document.getElementById('admin-pwd').value = '';
+    document.getElementById('teacher-login').style.display = 'block';
+    document.getElementById('teacher-panel').style.display = 'none';
+}
+
+function renderAdminCourses() {
+    const tbody = document.getElementById('admin-course-list');
+    tbody.innerHTML = '';
+    
+    allCourses.forEach(c => {
+        const count = allRecords.filter(r => r.courseId == c.id).length;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${c.name}</td>
+            <td>${c.teacher}</td>
+            <td><strong>${c.quota}</strong></td>
+            <td style="color:${count >= c.quota ? '#f56c6c' : '#67c23a'}"><strong>${count}</strong></td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="editCourse(${c.id})">编辑</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteCourse(${c.id})">删除</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    if (allCourses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">暂无课程，请点击上方新增</td></tr>';
+    }
+}
+
+function renderFilterOptions() {
+    const sel = document.getElementById('filter-course');
+    sel.innerHTML = '<option value="">全部课程</option>';
+    allCourses.forEach(c => {
+        sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+    });
+}
+
+function renderStudentList() {
+    const filter = document.getElementById('filter-course').value;
+    const filtered = filter ? allRecords.filter(r => r.courseId == filter) : allRecords;
+    
+    const tbody = document.getElementById('student-record-list');
+    tbody.innerHTML = '';
+    document.getElementById('total-count').textContent = filtered.length;
+    
+    filtered.forEach((r, i) => {
+        const course = allCourses.find(c => c.id == r.courseId);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${i + 1}</td>
+            <td>${r.stuClass}</td>
+            <td>${r.stuName}</td>
+            <td>${course ? course.name : '未知课程'}</td>
+            <td>${r.time}</td>
+            <td><button class="btn btn-sm btn-danger" onclick="deleteRecord('${r.stuKey}')">删除记录</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">暂无选课记录</td></tr>';
+    }
+}
+
+// 课程增删改
+function showAddCourse() {
+    document.getElementById('modal-title').textContent = '新增课程';
+    document.getElementById('edit-course-id').value = '';
+    document.getElementById('course-name-input').value = '';
+    document.getElementById('course-teacher-input').value = '';
+    document.getElementById('course-quota-input').value = '';
+    document.getElementById('course-modal').classList.add('show');
+}
+
+function editCourse(id) {
+    const course = allCourses.find(c => c.id == id);
+    if (!course) return;
+    document.getElementById('modal-title').textContent = '编辑课程';
+    document.getElementById('edit-course-id').value = id;
+    document.getElementById('course-name-input').value = course.name;
+    document.getElementById('course-teacher-input').value = course.teacher;
+    document.getElementById('course-quota-input').value = course.quota;
+    document.getElementById('course-modal').classList.add('show');
+}
+
+async function saveCourse() {
+    const id = document.getElementById('edit-course-id').value;
+    const name = document.getElementById('course-name-input').value.trim();
+    const teacher = document.getElementById('course-teacher-input').value.trim();
+    const quota = parseInt(document.getElementById('course-quota-input').value);
+    
+    if (!name || !teacher || !quota || quota < 1) {
+        alert('请填写完整信息，人数上限至少为1');
+        return;
+    }
+    
+    const res = await request('saveCourse', { password: adminPassword, id, name, teacher, quota });
+    if (res.code === 0) {
+        closeModal();
+        await loadCourses();
+        renderAdminCourses();
+        renderFilterOptions();
+    } else {
+        alert(res.msg);
+    }
+}
+
+async function deleteCourse(id) {
+    const selected = allRecords.filter(r => r.courseId == id).length;
+    const tip = selected > 0 
+        ? `该课程已有 ${selected} 人选课，删除后这些选课记录也会被清除，确定删除吗？`
+        : '确定删除该课程吗？';
+    
+    if (!confirm(tip)) return;
+    
+    const res = await request('deleteCourse', { password: adminPassword, id });
+    if (res.code === 0) {
+        await loadCourses();
+        await loadRecords();
+        renderAdminCourses();
+        renderFilterOptions();
+        renderStudentList();
+    }
+}
+
+async function deleteRecord(stuKey) {
+    if (!confirm('确定删除该学生的选课记录吗？删除后学生可重新选课。')) return;
+    const res = await request('deleteRecord', { password: adminPassword, stuKey });
+    if (res.code === 0) {
+        await loadRecords();
+        renderAdminCourses();
+        renderStudentList();
+    }
+}
+
+async function clearAllRecords() {
+    if (!confirm('⚠️ 确定要清空所有选课记录吗？此操作不可恢复！')) return;
+    const res = await request('clearRecords', { password: adminPassword });
+    if (res.code === 0) {
+        await loadRecords();
+        renderAdminCourses();
+        renderStudentList();
+        alert(res.msg);
+    }
+}
+
+function closeModal() {
+    document.getElementById('course-modal').classList.remove('show');
+}
+
+// 导出CSV
+function exportData() {
+    if (allRecords.length === 0) {
+        alert('暂无选课数据可导出');
+        return;
+    }
+    
+    let csv = '\uFEFF班级,姓名,所选课程,任课教师,选课时间\n';
+    allRecords.forEach(r => {
+        const course = allCourses.find(c => c.id == r.courseId);
+        const tName = course ? course.teacher : '';
+        const cName = course ? course.name : '未知课程';
+        csv += `${r.stuClass},${r.stuName},${cName},${tName},${r.time}\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `选课名单_${new Date().toLocaleDateString()}.csv`;
+    link.click();
+}
+
+// 弹窗外部关闭
+document.getElementById('course-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+// 监听hash变化
+window.addEventListener('hashchange', checkEntry);
+
+// 初始化
+checkEntry();
+loadCourses();
+</script>
+</body>
+</html>
